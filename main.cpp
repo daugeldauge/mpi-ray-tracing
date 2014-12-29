@@ -2,7 +2,6 @@
 
 #include "mpi.h"
 
-#include "scene.h"
 #include "tracer.h"
 
 
@@ -26,11 +25,8 @@ main(int argc, char *argv[])
     }
   }
 
-  Scene scene;
-
-  Tracer tracer = {scene, width, height};
-  tracer.renderImage();
-  tracer.saveImage(path);
+  Tracer tracer = {width, height};
+  tracer.renderImage(path);
 
   MPI::Finalize();
   return 0;

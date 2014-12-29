@@ -2,9 +2,12 @@ CXX = mpicxx
 CXXFLAGS = -g -std=c++11
 LDFLAGS =
 
-HFILES = tracer.h scene.h
-CPPFILES = main.cpp tracer.cpp scene.cpp
+HFILES = tracer.h scene.h image.h
+CPPFILES = main.cpp tracer.cpp scene.cpp image.cpp
 OBJECTS = $(CPPFILES:.cpp=.o)
+
+INCLUDES = -I./libs/
+CXXFLAGS += $(INCLUDES)
 
 TARGET = raytracer
 
@@ -15,7 +18,7 @@ $(TARGET): $(OBJECTS)
 
 include deps.make
 deps.make: $(CPPFILES) $(HFILES)
-	gcc -MM $(CPPFILES) > deps.make
+	$(CXX) -MM $(CXXFLAGS) $(CPPFILES) > deps.make
 
 clean:
 	rm -f $(TARGET) deps.make *.o

@@ -1,13 +1,7 @@
 #include "tracer.h"
 
 void
-Tracer::renderImage()
-{
-
-}
-
-void
-Tracer::saveImage(std::string path)
+Tracer::renderImage(const std::string &path)
 {
 
 }

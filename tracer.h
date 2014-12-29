@@ -4,18 +4,17 @@
 #include <string>
 
 #include "scene.h"
+#include "image.h"
 
 class Tracer
 {
   Scene scene;
-  int width, height;
-
+  Image image;
 public:
-  Tracer(const Scene &scene, int width, int height)
-    : scene(scene), width(width), height(height) {}
+  Tracer(int width, int height)
+    : scene(), image(width, height) {}
 
-  void renderImage();
-  void saveImage(std::string path);
+  void renderImage(const std::string &path);
 };
 
 #endif
