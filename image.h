@@ -18,6 +18,7 @@ public:
   const glm::vec3 &operator()(int i, int j) const { return data[width * i + j]; }
   void save(const std::string &path) const;
   template <typename Function> void each(Function function);
+  template <typename Function> void each(Function function) const;
   void generateSample();
 };
 

@@ -1,5 +1,5 @@
 CXX = mpicxx
-CXXFLAGS = -g -std=c++11 -Wall -Wextra -Werror -Wno-unused-parameter
+CXXFLAGS = -g -std=c++1y -Wall -Wextra -Werror
 LDFLAGS =
 
 HFILES = tracer.h scene.h image.h lodepng.h
