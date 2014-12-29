@@ -5,24 +5,6 @@
 
 #include "image.h"
 
-template <typename Function> void
-Image::each(Function function) const {
-  for (int i = 0; i < height; ++i) {
-    for (int j = 0; j < width; ++j) {
-      function((*this)(i, j), i, j);
-    }
-  }
-}
-
-template <typename Function> void
-Image::each(Function function) {
-  for (int i = 0; i < height; ++i) {
-    for (int j = 0; j < width; ++j) {
-      function((*this)(i, j), i, j);
-    }
-  }
-}
-
 void
 Image::generateSample()
 {
