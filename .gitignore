@@ -3,6 +3,8 @@ deps.make
 .DS_Store
 glm/
 lodepng*
+l3ds*
+
 *.png
 
 # Compiled Object files
