@@ -3,7 +3,7 @@
 
 #include <string>
 
-#include <glm/vec3.hpp>
+#include "glm/glm.hpp"
 
 class Image
 {
@@ -15,7 +15,10 @@ public:
     : width(width), height(height), data(new glm::vec3[width * height]) {}
   
   glm::vec3 &operator()(int i, int j) { return data[width * i + j]; }
-  void save(const std::string &path);
+  const glm::vec3 &operator()(int i, int j) const { return data[width * i + j]; }
+  void save(const std::string &path) const;
+  template <typename Function> void each(Function function);
+  void generateSample();
 };
 
 #endif

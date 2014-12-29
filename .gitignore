@@ -1,7 +1,9 @@
 raytracer
 deps.make
 .DS_Store
-libs/
+glm/
+lodepng*
+*.png
 
 # Compiled Object files
 *.slo

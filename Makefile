@@ -1,13 +1,10 @@
 CXX = mpicxx
-CXXFLAGS = -g -std=c++11
+CXXFLAGS = -g -std=c++11 -Wall -Wextra -Werror -Wno-unused-parameter
 LDFLAGS =
 
-HFILES = tracer.h scene.h image.h
-CPPFILES = main.cpp tracer.cpp scene.cpp image.cpp
+HFILES = tracer.h scene.h image.h lodepng.h
+CPPFILES = main.cpp tracer.cpp scene.cpp image.cpp lodepng.cpp
 OBJECTS = $(CPPFILES:.cpp=.o)
-
-INCLUDES = -I./libs/
-CXXFLAGS += $(INCLUDES)
 
 TARGET = raytracer
 
