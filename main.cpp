@@ -26,13 +26,21 @@ main(int argc, char *argv[])
         path = argv[++i];
       }
     }
-  
-    Tracer tracer = {width, height};
+    Camera camera = {
+      {-10.f, 0.f, 3.f}, //position
+      {  1.f, 0.f, 0.f}, //forward
+      {  0.f, 1.f, 0.f}, //right
+      {  0.f, 0.f, 1.f}, //up
+      {1.04720f, 0.817275f} //view angle
+    };
+
+    Tracer tracer = {camera, width, height};
     tracer.renderImage(path);
   
   } catch (const std::exception &exception) {
     std::cerr << exception.what() << std::endl; 
   }
+  
   MPI::Finalize();
   return 0;
 }
