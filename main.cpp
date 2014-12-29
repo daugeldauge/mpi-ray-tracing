@@ -8,7 +8,7 @@
 
 
 int 
-main(int argc, const char *argv[])
+main(int argc, char *argv[])
 {
   MPI::Init(argc, argv);
 
@@ -30,7 +30,7 @@ main(int argc, const char *argv[])
 
   Tracer tracer = {scene, width, height};
   tracer.renderImage();
-  tracer.saveImage();
+  tracer.saveImage(path);
 
   MPI::Finalize();
   return 0;
