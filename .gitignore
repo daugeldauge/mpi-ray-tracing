@@ -1,5 +1,6 @@
 deps.make
 .DS_Store
+libs/
 
 # Compiled Object files
 *.slo
