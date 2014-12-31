@@ -2,8 +2,8 @@ CXX = mpicxx
 CXXFLAGS = -g -std=c++1y -Wall -Wextra -Werror
 LDFLAGS =
 
-HFILES = tracer.h scene.h image.h lodepng.h l3ds.h
-CPPFILES = main.cpp tracer.cpp scene.cpp image.cpp lodepng.cpp l3ds.cpp
+HFILES = tracer.h scene.h image.h lodepng.h tiny_obj_loader.h
+CPPFILES = main.cpp tracer.cpp scene.cpp image.cpp lodepng.cpp tiny_obj_loader.cpp
 OBJECTS = $(CPPFILES:.cpp=.o)
 
 TARGET = raytracer
@@ -18,4 +18,4 @@ deps.make: $(CPPFILES) $(HFILES)
 	$(CXX) -MM $(CXXFLAGS) $(CPPFILES) > deps.make
 
 clean:
-	rm -f $(TARGET) deps.make *.o
+	rm -f $(TARGET) deps.make *.o result.png

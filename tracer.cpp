@@ -1,6 +1,12 @@
 #include <iostream>
 
+#include "glm/gtx/norm.hpp"
+//#include "glm/gtx/constants.hpp"
+#include "glm/gtc/type_ptr.hpp"
+
 #include "tracer.h"
+
+using namespace glm;
 
 inline Ray
 Tracer::createRay(int i, int j) const
@@ -8,24 +14,22 @@ Tracer::createRay(int i, int j) const
   float x = (j + 0.5f) / image.width  * 2.0f - 1.0f; 
   float y = (i + 0.5f) / image.height * 2.0f - 1.0f; 
 
-  glm::vec3 direction = glm::normalize(camera.forward + rightHalfPlane * x + upHalfPlane * y);
+  vec3 direction = normalize(camera.forward + rightHalfPlane * x + upHalfPlane * y);
 
   return {camera.position, direction};
 }
 
 inline float
-Tracer::isIntersect(const Ray &ray, const Triangle &triangle)
+Ray::isIntersect(const Triangle &triangle) const
 {
   /* http://ray-tracing.ru/articles213.html */
   
-  using namespace glm;
+  vec3 v0, v1, v2;
 
-  vec3 v0 = std::get<0>(triangle);
-  vec3 v1 = std::get<1>(triangle);
-  vec3 v2 = std::get<2>(triangle);
-  
-  vec3 D = ray.direction;
-  vec3 O = ray.start;
+  std::tie(v0, v1, v2) = triangle;
+
+  vec3 D = direction;
+  vec3 O = start;
 
   vec3 E1 = v1 - v0;
   vec3 E2 = v2 - v0;
@@ -63,11 +67,121 @@ Tracer::isIntersect(const Ray &ray, const Triangle &triangle)
   return dot(n, v0 - O) / dot(n, D);
 }
 
-inline glm::vec3
-Tracer::handleIntersection(const Ray &, const Mesh &, const Triangle &)
+inline std::tuple<glm::vec3, bool>
+Ray::refract(glm::vec3 normal, float index) const
 {
-  return {0.f, 0.f, 1.f};
+  float eta = 1.0f / index;
+  float cosTheta = -dot(normal, direction);
+  if (cosTheta < 0) {
+    cosTheta *= -1.0f;
+    normal *= -1.0f;
+    eta = 1.0f / eta;
+  }
+  float k = 1.0f - eta * eta * (1.0f - cosTheta * cosTheta);
+  
+  vec3 refraction = direction;
+  if (k >= 0.0f) {
+    refraction = normalize(eta * direction + (eta * cosTheta - sqrt(k)) * normal);
+  }
+  return std::make_tuple(refraction, (k > 0.0f));
 }
+
+inline float
+fresnelReflectance(float ci, float n)
+{
+  if (ci < 0) {
+    n = 1.0f / n;
+  }
+  float ci2 = ci * ci;
+  float si2 = 1.0f - ci2;
+  float si4 = si2 * si2;
+  float a = ci2 + n * n - 1.0f;
+  float sqa = 2 * sqrtf(a) * ci;
+  float b = ci2 + a;
+  float c = ci2 * a + si4;
+  float d = sqa * si2;
+  float r = (b - sqa) / (b + sqa) * (1.0f + (c - d) / (c + d)) * 0.5f;
+  if (r > 1.0f || r < 0.0f ) {
+    throw std::runtime_error("Invalid fresnel reflectance coefficient: " + std::to_string(r));
+  }
+  return r;
+}
+
+
+inline glm::vec3
+Tracer::handleIntersection(const Ray &ray, const tinyobj::material_t &material, const Triangle &triangle)
+{
+  vec3 color = {0.f, 0.f, 0.f};
+  vec3 v0, v1, v2;
+  std::tie(v0, v1, v2) = triangle;
+
+  vec3 normal = normalize(cross(v1 - v0, v2 - v0));
+
+  vec3 v = v0 - ray.start;
+
+  float d = dot(normal, v);
+  float e = dot(normal, ray.direction);
+
+  vec3 point = ray.start + ray.direction * d / e;
+
+  // Ray refraction, reflection = {point, reflect(ray.direction, normal)}; 
+  // bool isRefraction;
+  // std::tie(refraction.direction, isRefraction) = ray.refract(normal, mesh.refractiveIndex);
+
+  // if (isRefraction) {
+  //   refraction.start = point;
+  //   // float r = fresnelReflectance(-e, mesh.refractiveIndex);
+  //   // color = (1 - r) * traceRay(refraction) + r * traceRay(reflection);
+  //   color = 0.95f * traceRay(refraction);
+  // } else {
+  //   color = traceRay(reflection);
+  // }
+
+  vec3 s = normalize(camera.position - point);
+  
+  auto ka = make_vec3(material.ambient);
+  auto kd = make_vec3(material.diffuse);
+  auto ks = make_vec3(material.specular);
+  
+  float diffuseIntensity = clamp(dot(s, normal), 0.0f, 1.0f);
+  vec3 lightReflection = normalize(reflect(s, normal));
+  float specularIntensity = pow(clamp(dot(lightReflection, -ray.direction), 0.0f, 1.0f), material.shininess);
+
+  color += ka + kd * diffuseIntensity + ks * specularIntensity; 
+  return clamp(color, 0.0f, 1.0f);
+}
+
+// glm::vec3
+// Tracer::getTextureColor(const Ray &ray)
+// {
+//   const float radius = 100.0f;
+//   float b = dot(ray.start, ray.direction);
+//   float c = dot(ray.start, ray.start) - radius * radius;
+//   float d = b * b - c; 
+
+//   if (d < 0) {
+//     throw std::runtime_error("Your sphere was fucked up!");
+//   }
+//   float sqrtd = sqrtf(d);
+
+//   float t1 = -b + sqrtd;
+//   float t2 = -b - sqrtd;
+
+//   float minT = std::min(t1, t2);
+//   float maxT = std::max(t1, t2);
+
+//   float t = (minT >= 0)? minT : maxT;
+
+//   vec3 point = ray.start + t * ray.direction;
+
+//   float theta = acos(point.y / l2Norm(point)); 
+//   float phi = atan(point.z, point.x);
+
+//   int i = (theta * scene.texture.height / pi<float>());
+//   int j = ((phi + pi<float>()) * scene.texture.height * one_over_pi<float>() / 2);
+
+//   return scene.texture(i, j);
+// }
 
 glm::vec3
 Tracer::traceRay(const Ray &ray)
@@ -77,38 +191,40 @@ Tracer::traceRay(const Ray &ray)
   }
   
   float minDistance = std::numeric_limits<float>::max();
+  
   bool isIntersection = false;
-  Mesh targetMesh;
-  Triangle targetTriangle;
+  Triangle triangle;
+  tinyobj::material_t material;
 
-  for (auto mesh : scene.meshes) {
-    for (auto triangle : mesh) {
-      float distance = isIntersect(ray, triangle);
+  for (auto shape : scene.shapes) {
+    for (int i = 0; i < shape.nTriangles(); ++i) {
+      float distance = ray.isIntersect(shape.triangle(i));
+      
       if (distance > 0.f && distance < minDistance) {
         isIntersection = true;
-        targetTriangle = triangle;
-        targetMesh = mesh;
+        minDistance = distance;
+        triangle = shape.triangle(i);
+        material = shape.material;
       }
     }
   }
 
   if (isIntersection) {
-    return handleIntersection(ray, targetMesh, targetTriangle);
+    return handleIntersection(ray, material, triangle);
   } else {
-    return {0.7f, 0.7f, 0.f};
+    return {0.f, 0.f, 0.f};
   }
 
 }
 
 void
 Tracer::renderImage(const std::string &path)
-{
-  scene.load("resources/crystal.3ds");
-  
+{ 
+
   rightHalfPlane = camera.right * glm::tan(camera.viewAngle.x / 2);
      upHalfPlane = camera.up    * glm::tan(camera.viewAngle.y / 2);
 
-  image.each([&](auto &pixel, int i, int j) {
+  image.each([&](vec3 &pixel, int i, int j) {
     if (j == 0) {
       std::cout << "line " << i << std::endl;
     }

@@ -10,6 +10,9 @@ struct Ray
 {
   glm::vec3 start;
   glm::vec3 direction;
+
+  float isIntersect(const Triangle &triangle) const;
+  std::tuple<glm::vec3, bool> refract(glm::vec3 normal, float index) const;
 };
 
 struct Camera
@@ -21,6 +24,13 @@ struct Camera
   glm::vec3 up;
 
   glm::vec2 viewAngle; // in radians
+  
+  Camera(const glm::vec3 &position, const glm::vec3 &forward, const glm::vec2 &viewAngle)
+    : position(position), forward(glm::normalize(forward)), viewAngle(viewAngle)
+  {
+    right = glm::cross(forward, glm::vec3(0.f, 0.f, 1.f));
+    up = glm::cross(right, forward);
+  }
 };
 
 class Tracer
@@ -38,13 +48,14 @@ class Tracer
   Ray createRay(int i, int j) const;
   glm::vec3 traceRay(const Ray &ray);
 
-  float isIntersect(const Ray &ray, const Triangle &triangle);
-  glm::vec3 handleIntersection(const Ray &ray, const Mesh &mesh, const Triangle &triangle);
+  glm::vec3 handleIntersection(const Ray &ray, const tinyobj::material_t &material, const Triangle &triangle);
+  glm::vec3 getTextureColor(const Ray &ray);
 
 
 public:
-  Tracer(Camera camera, int width, int height, int maxDepth)
-    : camera(camera), scene(), image(width, height), maxDepth(maxDepth) {}
+  Tracer(const std::string &path, Camera camera, int width, int height, int maxDepth)
+    : camera(camera), scene(path), 
+      image(width, height), maxDepth(maxDepth) {}
 
   void renderImage(const std::string &path);
 };

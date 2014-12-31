@@ -5,10 +5,30 @@
 
 #include "image.h"
 
+Image::Image(const std::string &path)
+{
+  std::vector<unsigned char> image;
+
+  unsigned w, h;
+  unsigned error = lodepng::decode(image, w, h, path);
+  if (error) {
+    throw std::runtime_error(std::string("lodepng decoding error: ") + lodepng_error_text(error));
+  }
+  width = w;
+  height = h;
+  data = std::unique_ptr<glm::vec3[]>(new glm::vec3[width * height]);
+  
+  each([&](glm::vec3 &pixel, int i, int j) {
+    pixel.r = image[4 * width * i + 4 * j + 0] / 255.0f;
+    pixel.g = image[4 * width * i + 4 * j + 1] / 255.0f;
+    pixel.b = image[4 * width * i + 4 * j + 2] / 255.0f;
+  });
+}
+
 void
 Image::generateSample()
 {
-  each([this](auto &pixel, int i, int) {
+  each([this](glm::vec3 &pixel, int i, int) {
     if (i < height / 3) {
       pixel = glm::vec3(1.f, 0.f, 0.f);
     } else if (i < 2 * height / 3) {
@@ -24,7 +44,7 @@ Image::save(const std::string &path) const
 {
   std::vector<unsigned char> image(width * height * 4);
 
-  each([&](auto &pixel, int i, int j) {
+  each([&](const glm::vec3 &pixel, int i, int j) {
     image[4 * width * i + 4 * j + 0] = glm::clamp(pixel.r, 0.f, 1.f) * 255.f; 
     image[4 * width * i + 4 * j + 1] = glm::clamp(pixel.g, 0.f, 1.f) * 255.f; 
     image[4 * width * i + 4 * j + 2] = glm::clamp(pixel.b, 0.f, 1.f) * 255.f;

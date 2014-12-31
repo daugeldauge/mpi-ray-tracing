@@ -2,6 +2,7 @@
 #define IMAGE_H
 
 #include <string>
+#include <memory>
 
 #include "glm/glm.hpp"
 
@@ -13,6 +14,8 @@ public:
   
   Image(int width, int height)
     : width(width), height(height), data(new glm::vec3[width * height]) {}
+
+  Image(const std::string &path);
   
   glm::vec3 &operator()(int i, int j) { return data[width * i + j]; }
   const glm::vec3 &operator()(int i, int j) const { return data[width * i + j]; }
