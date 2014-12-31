@@ -3,7 +3,7 @@ deps.make
 .DS_Store
 glm/
 lodepng*
-l3ds*
+tiny_obj_loader*
 
 *.png
 
