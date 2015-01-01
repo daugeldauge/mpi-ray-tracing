@@ -1,7 +1,7 @@
 #include <string>
 #include <iostream>
 
-//#include "mpi.h"
+#include "mpi.h"
 
 #include "tracer.h"
 
@@ -10,12 +10,14 @@
 int 
 main(int argc, char *argv[])
 { 
-  //MPI::Init(argc, argv);
+  MPI::Init(argc, argv);
+
+  double startTime = MPI::Wtime();
 
   try {
     int width = 640, height = 480;
     std::string path = "result.png";
-    std::string obj = "resources/cube.obj";
+    std::string obj = "resources/cornell_box.obj";
     
     for (int i = 1; i < argc; ++i) {
       std::string arg = argv[i]; 
@@ -32,11 +34,11 @@ main(int argc, char *argv[])
     std::cout << width << " " << height << std::endl;
 
     Camera camera(
-      {-2.f, -2.f, -1.f},  /* position */
+      {250.f, 250.f, 559.f},  /* position */
       
-      {1.f, 1.f, 1.f},      /* forward */
+      {0.f, 0.f, -1.f},      /* forward */
 
-      {1.04720f, 0.817275f} /* view angle */
+      {2 * 1.04720f, 2 * 0.817275f} /* view angle */
     );
 
     Tracer tracer = {obj, camera, width, height, 40};
@@ -46,6 +48,7 @@ main(int argc, char *argv[])
     std::cerr << exception.what() << std::endl; 
   }
   
-  //MPI::Finalize();
+  std::cout << "Execution time: " << MPI::Wtime() - startTime << std::endl;
+  MPI::Finalize();
   return 0;
 }

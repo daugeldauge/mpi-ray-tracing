@@ -28,7 +28,7 @@ struct Camera
   Camera(const glm::vec3 &position, const glm::vec3 &forward, const glm::vec2 &viewAngle)
     : position(position), forward(glm::normalize(forward)), viewAngle(viewAngle)
   {
-    right = glm::cross(forward, glm::vec3(0.f, 0.f, 1.f));
+    right = glm::cross(forward, glm::vec3(0.f, -1.f, 0.f));
     up = glm::cross(right, forward);
   }
 };

@@ -11,8 +11,8 @@ using namespace glm;
 inline Ray
 Tracer::createRay(int i, int j) const
 {
-  float x = (j + 0.5f) / image.width  * 2.0f - 1.0f; 
-  float y = (i + 0.5f) / image.height * 2.0f - 1.0f; 
+  float x = float(j) / image.width  * 2.f - 1.f; 
+  float y = float(i) / image.height * 2.f - 1.f; 
 
   vec3 direction = normalize(camera.forward + rightHalfPlane * x + upHalfPlane * y);
 
@@ -145,7 +145,7 @@ Tracer::handleIntersection(const Ray &ray, const tinyobj::material_t &material, 
   
   float diffuseIntensity = clamp(dot(s, normal), 0.0f, 1.0f);
   vec3 lightReflection = normalize(reflect(s, normal));
-  float specularIntensity = pow(clamp(dot(lightReflection, -ray.direction), 0.0f, 1.0f), material.shininess);
+  float specularIntensity = pow(clamp(dot(lightReflection, ray.direction), 0.0f, 1.0f), material.shininess);
 
   color += ka + kd * diffuseIntensity + ks * specularIntensity; 
   return clamp(color, 0.0f, 1.0f);
@@ -221,8 +221,8 @@ void
 Tracer::renderImage(const std::string &path)
 { 
 
-  rightHalfPlane = camera.right * glm::tan(camera.viewAngle.x / 2);
-     upHalfPlane = camera.up    * glm::tan(camera.viewAngle.y / 2);
+  rightHalfPlane = camera.right * glm::tan(camera.viewAngle.x / 2.f);
+     upHalfPlane = camera.up    * glm::tan(camera.viewAngle.y / 2.f);
 
   image.each([&](vec3 &pixel, int i, int j) {
     if (j == 0) {
