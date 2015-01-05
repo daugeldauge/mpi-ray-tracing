@@ -42,6 +42,9 @@ Image::generateSample()
 void
 Image::save(const std::string &path) const
 {
+  if (MPI::COMM_WORLD.Get_rank() != 0) {
+    return;
+  }
   std::vector<unsigned char> image(width * height * 4);
 
   each([&](const glm::vec3 &pixel, int i, int j) {
@@ -55,4 +58,16 @@ Image::save(const std::string &path) const
   if (error) {
     throw std::runtime_error(std::string("lodepng encoding error: ") + lodepng_error_text(error));
   }
+}
+
+void
+Image::gather()
+{
+  std::unique_ptr<glm::vec3[]> newData;
+  if (MPI::COMM_WORLD.Get_rank() == 0) { 
+    newData = std::unique_ptr<glm::vec3[]>(new glm::vec3[width * height]);
+  }
+  size_t size = blockSize * sizeof(glm::vec3);
+  MPI::COMM_WORLD.Gather(data.get(), size, MPI::BYTE, newData.get(), size, MPI::BYTE, 0);
+  data = std::move(newData);
 }

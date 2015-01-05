@@ -1,5 +1,6 @@
 #include <string>
 #include <iostream>
+#include <fstream>
 
 #include "mpi.h"
 
@@ -17,29 +18,37 @@ main(int argc, char *argv[])
   try {
     int width = 640, height = 480;
     std::string path = "result.png";
-    std::string obj = "resources/cornell_box.obj";
-    
-    for (int i = 1; i < argc; ++i) {
-      std::string arg = argv[i]; 
-      if (arg.compare("-w") == 0) {
-        width = std::stoi(argv[++i]);
-      } else if (arg.compare("-h") == 0) {
-        height = std::stoi(argv[++i]);
-      } else if (arg.compare("-result") == 0) {
-        path = argv[++i];
-      } else if (arg.compare("-obj") == 0) {
-        obj = argv[++i];
+    std::string obj;
+    Camera camera({0.f, 0.f, 0.f}, {1.f, 0.f, 0.f}, {1.04720f, 0.817275f});
+
+    std::ifstream config(argv[1]);
+
+
+    while (!config.eof()) {
+      std::string param;
+      config >> param; 
+      
+      if (param.compare("-w") == 0) {
+        config >> width;
+      } else if (param.compare("-h") == 0) {
+        config >> height;
+      } else if (param.compare("-result") == 0) {
+        config >> path;
+      } else if (param.compare("-obj") == 0) {
+        config >> obj;
+      } else if (param.compare("-camera") == 0) {
+        glm::vec3 position, forward;
+        glm::vec2 viewAngle;
+        config >> position.x >> position.y >> position.z;
+        config >> forward.x >> forward.y >> forward.z;
+        config >> viewAngle.x >> viewAngle.y;
+        camera = Camera(position, forward, viewAngle);
       }
     }
-    std::cout << width << " " << height << std::endl;
 
-    Camera camera(
-      {250.f, 250.f, 559.f},  /* position */
-      
-      {0.f, 0.f, -1.f},      /* forward */
-
-      {2 * 1.04720f, 2 * 0.817275f} /* view angle */
-    );
+    if (obj.empty()) {
+      throw std::runtime_error("You must specify path to .obj file in config");
+    }
 
     Tracer tracer = {obj, camera, width, height, 40};
     tracer.renderImage(path);
@@ -48,7 +57,10 @@ main(int argc, char *argv[])
     std::cerr << exception.what() << std::endl; 
   }
   
-  std::cout << "Execution time: " << MPI::Wtime() - startTime << std::endl;
+  MPI::COMM_WORLD.Barrier();
+  if (MPI::COMM_WORLD.Get_rank() == 0) {
+    std::cout << "Execution time: " << MPI::Wtime() - startTime << std::endl;
+  }
   MPI::Finalize();
   return 0;
 }

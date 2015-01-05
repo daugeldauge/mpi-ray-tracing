@@ -1,7 +1,7 @@
 #include <iostream>
 
+#include "mpi.h"
 #include "glm/gtx/norm.hpp"
-//#include "glm/gtx/constants.hpp"
 #include "glm/gtc/type_ptr.hpp"
 
 #include "tracer.h"
@@ -101,54 +101,78 @@ fresnelReflectance(float ci, float n)
   float c = ci2 * a + si4;
   float d = sqa * si2;
   float r = (b - sqa) / (b + sqa) * (1.0f + (c - d) / (c + d)) * 0.5f;
-  if (r > 1.0f || r < 0.0f ) {
-    throw std::runtime_error("Invalid fresnel reflectance coefficient: " + std::to_string(r));
-  }
+  // if (r > 1.0f || r < 0.0f ) {
+  //   throw std::runtime_error("Invalid fresnel reflectance coefficient: " + std::to_string(r));
+  // }
   return r;
 }
 
+inline vec3 pow(float base, const vec3 &exp)
+{
+  return vec3(
+    pow(base, exp.x),
+    pow(base, exp.y),
+    pow(base, exp.z)
+  );
+}
+
+inline vec3 mult(const vec3 &a, const vec3 &b)
+{
+  return vec3(a.x * b.x, a.y * b.y, a.z * b.z);
+}
 
 inline glm::vec3
 Tracer::handleIntersection(const Ray &ray, const tinyobj::material_t &material, const Triangle &triangle)
 {
-  vec3 color = {0.f, 0.f, 0.f};
+  vec3 pixel;
   vec3 v0, v1, v2;
   std::tie(v0, v1, v2) = triangle;
 
   vec3 normal = normalize(cross(v1 - v0, v2 - v0));
 
   vec3 v = v0 - ray.start;
-
   float d = dot(normal, v);
   float e = dot(normal, ray.direction);
 
   vec3 point = ray.start + ray.direction * d / e;
-
-  // Ray refraction, reflection = {point, reflect(ray.direction, normal)}; 
-  // bool isRefraction;
-  // std::tie(refraction.direction, isRefraction) = ray.refract(normal, mesh.refractiveIndex);
-
-  // if (isRefraction) {
-  //   refraction.start = point;
-  //   // float r = fresnelReflectance(-e, mesh.refractiveIndex);
-  //   // color = (1 - r) * traceRay(refraction) + r * traceRay(reflection);
-  //   color = 0.95f * traceRay(refraction);
-  // } else {
-  //   color = traceRay(reflection);
-  // }
-
-  vec3 s = normalize(camera.position - point);
   
-  auto ka = make_vec3(material.ambient);
-  auto kd = make_vec3(material.diffuse);
-  auto ks = make_vec3(material.specular);
+  { /* Phong lightning model */
+    vec3 s = normalize(camera.position - point);
   
-  float diffuseIntensity = clamp(dot(s, normal), 0.0f, 1.0f);
-  vec3 lightReflection = normalize(reflect(s, normal));
-  float specularIntensity = pow(clamp(dot(lightReflection, ray.direction), 0.0f, 1.0f), material.shininess);
+    auto ka = make_vec3(material.ambient);
+    auto kd = make_vec3(material.diffuse);
+    auto ks = make_vec3(material.specular);
+    auto ke = make_vec3(material.emission);
+    
+    float diffuseIntensity = clamp(dot(s, normal), 0.0f, 1.0f);
+    vec3 lightReflection = normalize(reflect(s, normal));
+    vec3 specularIntensity = pow(clamp(dot(lightReflection, ray.direction), 0.0f, 1.0f), ke);
 
-  color += ka + kd * diffuseIntensity + ks * specularIntensity; 
-  return clamp(color, 0.0f, 1.0f);
+    pixel = ka + kd * diffuseIntensity + mult(ks, specularIntensity); 
+  }
+  
+  vec3 refracted(1.f, 1.f, 1.f);
+  if (material.ior > 1.f) {
+    Ray refraction, reflection = {point, reflect(ray.direction, normal)}; 
+    bool isRefraction;
+    std::tie(refraction.direction, isRefraction) = ray.refract(normal, material.ior);
+
+    if (isRefraction) {
+      refraction.start = point;
+      float r = fresnelReflectance(-e, material.ior);
+      if (r >= 1.f){
+        refracted = traceRay(refraction);
+      } else {
+        refracted = (1 - r) * traceRay(refraction) + r * traceRay(reflection);
+      }
+    } else {
+      refracted = traceRay(reflection);
+    }
+  }
+  pixel = mult(pixel, refracted);
+
+
+  return clamp(pixel, 0.0f, 1.0f);
 }
 
 // glm::vec3
@@ -224,14 +248,20 @@ Tracer::renderImage(const std::string &path)
   rightHalfPlane = camera.right * glm::tan(camera.viewAngle.x / 2.f);
      upHalfPlane = camera.up    * glm::tan(camera.viewAngle.y / 2.f);
 
-  image.each([&](vec3 &pixel, int i, int j) {
-    if (j == 0) {
-      std::cout << "line " << i << std::endl;
-    }
+  int rank = MPI::COMM_WORLD.Get_rank();
+  int size = MPI::COMM_WORLD.Get_size();
+
+  int blockSize = image.width * image.height / size;
+
+  for (int blockIndex = 0; blockIndex < blockSize; ++blockIndex) {
+    int globalIndex = rank * blockSize + blockIndex;
+    int i = globalIndex / image.width;
+    int j = globalIndex % image.width;
     Ray ray = createRay(i, j);
     depth = 0;
-    pixel = traceRay(ray);
-  });   
+    image(i, j) = traceRay(ray);
+  }   
 
+  image.gather();
   image.save(path);
 }

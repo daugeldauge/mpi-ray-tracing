@@ -6,6 +6,7 @@ lodepng*
 tiny_obj_loader*
 
 *.png
+*.cfg
 
 # Compiled Object files
 *.slo

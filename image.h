@@ -4,21 +4,29 @@
 #include <string>
 #include <memory>
 
+#include "mpi.h"
 #include "glm/glm.hpp"
 
 class Image
 {
 public:
+  int offset;
+  int blockSize;
   int width, height;
   std::unique_ptr<glm::vec3[]> data;
   
-  Image(int width, int height)
-    : width(width), height(height), data(new glm::vec3[width * height]) {}
+  Image(int width, int height): width(width), height(height)
+  {
+    blockSize = width * height / MPI::COMM_WORLD.Get_size();
+    offset = blockSize * MPI::COMM_WORLD.Get_rank();
+    data = std::unique_ptr<glm::vec3[]>(new glm::vec3[blockSize]);
+  }
 
   Image(const std::string &path);
   
-  glm::vec3 &operator()(int i, int j) { return data[width * i + j]; }
-  const glm::vec3 &operator()(int i, int j) const { return data[width * i + j]; }
+  glm::vec3 &operator()(int i, int j) { return data[width * i + j - offset]; }
+  const glm::vec3 &operator()(int i, int j) const { return data[width * i + j - offset]; }
+  void gather();
   void save(const std::string &path) const;
   void generateSample();
   
