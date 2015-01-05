@@ -12,6 +12,6 @@ Scene::Scene(const std::string &path)
   }
 
   shapes.resize(tinyShapes.size());
-  std::copy(begin(tinyShapes), end(tinyShapes), begin(shapes));
+  std::copy(tinyShapes.begin(), tinyShapes.end(), shapes.begin());
 
 }

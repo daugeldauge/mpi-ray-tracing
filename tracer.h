@@ -12,7 +12,10 @@ struct Ray
   glm::vec3 direction;
 
   float isIntersect(const Triangle &triangle) const;
-  std::tuple<glm::vec3, bool> refract(glm::vec3 normal, float index) const;
+  bool refract(glm::vec3 normal, float index, glm::vec3 &refract) const;
+  Ray(const glm::vec3 &start, const glm::vec3 &direction)
+    :start(start), direction(direction) {}
+  Ray() {}
 };
 
 struct Camera

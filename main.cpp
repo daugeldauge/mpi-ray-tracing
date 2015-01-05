@@ -19,7 +19,7 @@ main(int argc, char *argv[])
     int width = 640, height = 480;
     std::string path = "result.png";
     std::string obj;
-    Camera camera({0.f, 0.f, 0.f}, {1.f, 0.f, 0.f}, {1.04720f, 0.817275f});
+    Camera camera(glm::vec3(0.f, 0.f, 0.f), glm::vec3(1.f, 0.f, 0.f), glm::vec2(1.04720f, 0.817275f));
 
     std::ifstream config(argv[1]);
 
@@ -50,7 +50,7 @@ main(int argc, char *argv[])
       throw std::runtime_error("You must specify path to .obj file in config");
     }
 
-    Tracer tracer = {obj, camera, width, height, 40};
+    Tracer tracer(obj, camera, width, height, 40);
     tracer.renderImage(path);
   
   } catch (const std::exception &exception) {

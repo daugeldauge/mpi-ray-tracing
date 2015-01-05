@@ -18,25 +18,31 @@ Image::Image(const std::string &path)
   height = h;
   data = std::unique_ptr<glm::vec3[]>(new glm::vec3[width * height]);
   
-  each([&](glm::vec3 &pixel, int i, int j) {
-    pixel.r = image[4 * width * i + 4 * j + 0] / 255.0f;
-    pixel.g = image[4 * width * i + 4 * j + 1] / 255.0f;
-    pixel.b = image[4 * width * i + 4 * j + 2] / 255.0f;
-  });
+  for (int i = 0; i < height; ++i) {
+    for (int j = 0; j < width; ++j) {
+      glm::vec3 &pixel = (*this)(i, j);
+      pixel.r = image[4 * width * i + 4 * j + 0] / 255.0f;
+      pixel.g = image[4 * width * i + 4 * j + 1] / 255.0f;
+      pixel.b = image[4 * width * i + 4 * j + 2] / 255.0f;
+    }
+  }
 }
 
 void
 Image::generateSample()
 {
-  each([this](glm::vec3 &pixel, int i, int) {
-    if (i < height / 3) {
-      pixel = glm::vec3(1.f, 0.f, 0.f);
-    } else if (i < 2 * height / 3) {
-      pixel = glm::vec3(0.f, 1.f, 0.f);
-    } else {
-      pixel = glm::vec3(0.f, 0.f, 1.f);
+  for (int i = 0; i < height; ++i) {
+    for (int j = 0; j < width; ++j) {
+      glm::vec3 &pixel = (*this)(i, j);
+      if (i < height / 3) {
+        pixel = glm::vec3(1.f, 0.f, 0.f);
+      } else if (i < 2 * height / 3) {
+        pixel = glm::vec3(0.f, 1.f, 0.f);
+      } else {
+        pixel = glm::vec3(0.f, 0.f, 1.f);
+      }
     }
-  });
+  }
 }
 
 void
@@ -47,12 +53,16 @@ Image::save(const std::string &path) const
   }
   std::vector<unsigned char> image(width * height * 4);
 
-  each([&](const glm::vec3 &pixel, int i, int j) {
-    image[4 * width * i + 4 * j + 0] = glm::clamp(pixel.r, 0.f, 1.f) * 255.f; 
-    image[4 * width * i + 4 * j + 1] = glm::clamp(pixel.g, 0.f, 1.f) * 255.f; 
-    image[4 * width * i + 4 * j + 2] = glm::clamp(pixel.b, 0.f, 1.f) * 255.f;
-    image[4 * width * i + 4 * j + 3] = 255;
-  });
+  
+  for (int i = 0; i < height; ++i) {
+    for (int j = 0; j < width; ++j) {
+      const glm::vec3 &pixel = (*this)(i, j);
+      image[4 * width * i + 4 * j + 0] = glm::clamp(pixel.r, 0.f, 1.f) * 255.f; 
+      image[4 * width * i + 4 * j + 1] = glm::clamp(pixel.g, 0.f, 1.f) * 255.f; 
+      image[4 * width * i + 4 * j + 2] = glm::clamp(pixel.b, 0.f, 1.f) * 255.f;
+      image[4 * width * i + 4 * j + 3] = 255;
+    }
+  }
 
   unsigned error = lodepng::encode(path, image, width, height);
   if (error) {

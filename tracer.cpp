@@ -16,7 +16,7 @@ Tracer::createRay(int i, int j) const
 
   vec3 direction = normalize(camera.forward + rightHalfPlane * x + upHalfPlane * y);
 
-  return {camera.position, direction};
+  return Ray(camera.position, direction);
 }
 
 inline float
@@ -25,8 +25,9 @@ Ray::isIntersect(const Triangle &triangle) const
   /* http://ray-tracing.ru/articles213.html */
   
   vec3 v0, v1, v2;
-
-  std::tie(v0, v1, v2) = triangle;
+  v0 = triangle.v0;
+  v1 = triangle.v1;
+  v2 = triangle.v2;
 
   vec3 D = direction;
   vec3 O = start;
@@ -67,8 +68,8 @@ Ray::isIntersect(const Triangle &triangle) const
   return dot(n, v0 - O) / dot(n, D);
 }
 
-inline std::tuple<glm::vec3, bool>
-Ray::refract(glm::vec3 normal, float index) const
+inline bool
+Ray::refract(glm::vec3 normal, float index, glm::vec3 &refract) const 
 {
   float eta = 1.0f / index;
   float cosTheta = -dot(normal, direction);
@@ -79,11 +80,10 @@ Ray::refract(glm::vec3 normal, float index) const
   }
   float k = 1.0f - eta * eta * (1.0f - cosTheta * cosTheta);
   
-  vec3 refraction = direction;
   if (k >= 0.0f) {
-    refraction = normalize(eta * direction + (eta * cosTheta - sqrt(k)) * normal);
+    refract = normalize(eta * direction + (eta * cosTheta - sqrt(k)) * normal);
   }
-  return std::make_tuple(refraction, (k > 0.0f));
+  return (k > 0.0f);
 }
 
 inline float
@@ -126,7 +126,9 @@ Tracer::handleIntersection(const Ray &ray, const tinyobj::material_t &material, 
 {
   vec3 pixel;
   vec3 v0, v1, v2;
-  std::tie(v0, v1, v2) = triangle;
+  v0 = triangle.v0;
+  v1 = triangle.v1;
+  v2 = triangle.v2;
 
   vec3 normal = normalize(cross(v1 - v0, v2 - v0));
 
@@ -139,10 +141,10 @@ Tracer::handleIntersection(const Ray &ray, const tinyobj::material_t &material, 
   { /* Phong lightning model */
     vec3 s = normalize(camera.position - point);
   
-    auto ka = make_vec3(material.ambient);
-    auto kd = make_vec3(material.diffuse);
-    auto ks = make_vec3(material.specular);
-    auto ke = make_vec3(material.emission);
+    vec3 ka = make_vec3(material.ambient);
+    vec3 kd = make_vec3(material.diffuse);
+    vec3 ks = make_vec3(material.specular);
+    vec3 ke = make_vec3(material.emission);
     
     float diffuseIntensity = clamp(dot(s, normal), 0.0f, 1.0f);
     vec3 lightReflection = normalize(reflect(s, normal));
@@ -153,9 +155,8 @@ Tracer::handleIntersection(const Ray &ray, const tinyobj::material_t &material, 
   
   vec3 refracted(1.f, 1.f, 1.f);
   if (material.ior > 1.f) {
-    Ray refraction, reflection = {point, reflect(ray.direction, normal)}; 
-    bool isRefraction;
-    std::tie(refraction.direction, isRefraction) = ray.refract(normal, material.ior);
+    Ray refraction, reflection = Ray(point, reflect(ray.direction, normal)); 
+    bool isRefraction = ray.refract(normal, material.ior, refraction.direction);
 
     if (isRefraction) {
       refraction.start = point;
@@ -211,7 +212,7 @@ glm::vec3
 Tracer::traceRay(const Ray &ray)
 {
   if (++depth > maxDepth) {
-    return {1.f, 0.f, 0.f};
+    return vec3(1.f, 0.f, 0.f);
   }
   
   float minDistance = std::numeric_limits<float>::max();
@@ -220,15 +221,15 @@ Tracer::traceRay(const Ray &ray)
   Triangle triangle;
   tinyobj::material_t material;
 
-  for (auto shape : scene.shapes) {
-    for (int i = 0; i < shape.nTriangles(); ++i) {
-      float distance = ray.isIntersect(shape.triangle(i));
+  for (std::vector<Shape>::const_iterator shape = scene.shapes.begin(); shape != scene.shapes.end(); ++shape) {
+    for (int i = 0; i < shape->nTriangles(); ++i) {
+      float distance = ray.isIntersect(shape->triangle(i));
       
       if (distance > 0.f && distance < minDistance) {
         isIntersection = true;
         minDistance = distance;
-        triangle = shape.triangle(i);
-        material = shape.material;
+        triangle = shape->triangle(i);
+        material = shape->material;
       }
     }
   }
@@ -236,7 +237,7 @@ Tracer::traceRay(const Ray &ray)
   if (isIntersection) {
     return handleIntersection(ray, material, triangle);
   } else {
-    return {0.f, 0.f, 0.f};
+    return vec3(0.f, 0.f, 0.f);
   }
 
 }
