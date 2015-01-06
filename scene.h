@@ -2,7 +2,6 @@
 #define SCENE_H
 
 #include <vector>
-#include <tuple>
 
 #include "glm/glm.hpp"
 #include "glm/gtc/type_ptr.hpp"

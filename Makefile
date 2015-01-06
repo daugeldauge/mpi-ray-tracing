@@ -1,5 +1,5 @@
 CXX = mpicxx
-CXXFLAGS = -g -std=c++03 -O3 -Wall -Wextra -Werror
+CXXFLAGS = -g -O3 -Werror
 LDFLAGS =
 
 HFILES = tracer.h scene.h image.h lodepng.h tiny_obj_loader.h

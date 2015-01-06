@@ -16,7 +16,7 @@ Image::Image(const std::string &path)
   }
   width = w;
   height = h;
-  data = std::unique_ptr<glm::vec3[]>(new glm::vec3[width * height]);
+  data = new glm::vec3[width * height];
   
   for (int i = 0; i < height; ++i) {
     for (int j = 0; j < width; ++j) {
@@ -57,10 +57,10 @@ Image::save(const std::string &path) const
   for (int i = 0; i < height; ++i) {
     for (int j = 0; j < width; ++j) {
       const glm::vec3 &pixel = (*this)(i, j);
-      image[4 * width * i + 4 * j + 0] = glm::clamp(pixel.r, 0.f, 1.f) * 255.f; 
-      image[4 * width * i + 4 * j + 1] = glm::clamp(pixel.g, 0.f, 1.f) * 255.f; 
-      image[4 * width * i + 4 * j + 2] = glm::clamp(pixel.b, 0.f, 1.f) * 255.f;
-      image[4 * width * i + 4 * j + 3] = 255;
+      image[4 * width * i + 4 * j + 0] = static_cast<unsigned char>(glm::clamp(pixel.r, 0.f, 1.f) * 255.f);
+      image[4 * width * i + 4 * j + 1] = static_cast<unsigned char>(glm::clamp(pixel.g, 0.f, 1.f) * 255.f);
+      image[4 * width * i + 4 * j + 2] = static_cast<unsigned char>(glm::clamp(pixel.b, 0.f, 1.f) * 255.f);
+      image[4 * width * i + 4 * j + 3] = static_cast<unsigned char>(255.f);
     }
   }
 
@@ -73,11 +73,14 @@ Image::save(const std::string &path) const
 void
 Image::gather()
 {
-  std::unique_ptr<glm::vec3[]> newData;
+  glm::vec3 *newData = 0;
   if (MPI::COMM_WORLD.Get_rank() == 0) { 
-    newData = std::unique_ptr<glm::vec3[]>(new glm::vec3[width * height]);
+    newData = new glm::vec3[width * height];
   }
   size_t size = blockSize * sizeof(glm::vec3);
-  MPI::COMM_WORLD.Gather(data.get(), size, MPI::BYTE, newData.get(), size, MPI::BYTE, 0);
-  data = std::move(newData);
+  MPI::COMM_WORLD.Gather(data, size, MPI::BYTE, newData, size, MPI::BYTE, 0);
+  if (data) {
+    delete[] data;
+  }
+  data = newData;
 }
